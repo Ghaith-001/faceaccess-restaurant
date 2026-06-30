@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceAccess Restaurant — Connexion</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --dark: #111827;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+        body {
+            background: var(--dark);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-container { width:100%; max-width:400px; animation:fadeIn .5s ease; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+        .login-card {
+            background: rgba(255,255,255,.05);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,.1);
+        }
+        .logo { text-align:center; margin-bottom:30px; }
+        .logo-icon { font-size:52px; margin-bottom:10px; }
+        .logo-text {
+            font-size:24px; font-weight:700;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .subtitle { text-align:center; color:#9ca3af; margin-bottom:30px; font-size:14px; }
+        .form-group { margin-bottom:20px; }
+        .form-label { display:block; margin-bottom:8px; color:#d1d5db; font-size:14px; font-weight:500; }
+        .form-input {
+            width:100%; padding:14px;
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 10px; color:white; font-size:16px; transition:all .3s;
+        }
+        .form-input:focus { outline:none; border-color:var(--primary); background:rgba(255,255,255,.12); box-shadow:0 0 0 3px rgba(37,99,235,.2); }
+        .form-input::placeholder { color:#6b7280; }
+        .btn {
+            width:100%; padding:14px;
+            background: var(--primary); color:white; border:none;
+            border-radius:10px; font-size:16px; font-weight:600;
+            cursor:pointer; transition:all .3s; margin-top:10px;
+        }
+        .btn:hover { background:#1d4ed8; transform:translateY(-2px); box-shadow:0 10px 20px rgba(37,99,235,.3); }
+        .error-message {
+            background: rgba(239,68,68,.2); border:1px solid rgba(239,68,68,.3);
+            color:#fca5a5; padding:12px; border-radius:8px; margin-bottom:20px; font-size:14px; display:none;
+        }
+        .footer { text-align:center; margin-top:30px; color:#6b7280; font-size:12px; }
+        .spinner { display:inline-block; width:20px; height:20px; border:3px solid rgba(255,255,255,.3); border-radius:50%; border-top-color:white; animation:spin 1s infinite; margin-right:10px; vertical-align:middle; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <div class="logo-icon">🍽️</div>
+            <div class="logo-text">FaceAccess Restaurant</div>
+        </div>
+        <div class="subtitle">Contrôle d'accès par reconnaissance faciale</div>
+        <div class="login-card">
+            <div class="error-message" id="errorMessage"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label" for="username"> Nom d'utilisateur</label>
+                    <input type="text" id="username" class="form-input" placeholder="admin" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="password"> Mot de passe</label>
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn" id="loginBtn">
+                    <span id="btnText"> Se connecter</span>
+                    <span id="btnSpinner" class="spinner" style="display:none"></span>
+                </button>
+            </form>
+            <div class="footer">
+                <p>Version 1.0 — Accès réservé au personnel autorisé</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (token) window.location.href = '/dashboard.html';
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('errorMessage');
+            const btn = document.getElementById('loginBtn');
+            const btnText = document.getElementById('btnText');
+            const spinner = document.getElementById('btnSpinner');
+
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+            errorEl.style.display = 'none';
+
+            try {
+                const r = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await r.json();
+                if (r.ok) {
+                    localStorage.setItem('token', data.token);
+                    window.location.href = '/dashboard.html';
+                } else {
+                    errorEl.textContent = data.error || 'Identifiants incorrects';
+                    errorEl.style.display = 'block';
+                    document.getElementById('password').value = '';
+                }
+            } catch {
+                errorEl.textContent = 'Erreur de connexion au serveur';
+                errorEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'inline';
+                spinner.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

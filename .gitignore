@@ -1,0 +1,28 @@
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Expo files
+.expo/
+**/.expo/
+
+# Environment files
+.env
+**/.env
+.env.local
+.env.*.local
+
+# Native builds
+ios/build/
+android/build/
+**/*.xcworkspace
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Local databases and uploads
+uploads/
+**/uploads/
+*.pkl
+**/*.pkl

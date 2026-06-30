@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceAccess Restaurant — Dashboard</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #111827;
+            --card: #1f2937;
+            --border: #374151;
+            --text: #f9fafb;
+            --muted: #9ca3af;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+        body { background:var(--dark); color:var(--text); min-height:100vh; }
+
+        /* Layout */
+        .sidebar { position:fixed; left:0; top:0; bottom:0; width:220px; background:var(--card); border-right:1px solid var(--border); padding:20px 0; z-index:100; }
+        .sidebar-logo { padding:0 20px 20px; border-bottom:1px solid var(--border); margin-bottom:10px; }
+        .sidebar-logo h2 { font-size:16px; font-weight:700; color:var(--text); }
+        .sidebar-logo span { font-size:11px; color:var(--muted); }
+        .nav-item { display:flex; align-items:center; gap:10px; padding:11px 20px; cursor:pointer; color:var(--muted); font-size:14px; transition:all .2s; border-left:3px solid transparent; }
+        .nav-item:hover { background:rgba(255,255,255,.05); color:var(--text); }
+        .nav-item.active { background:rgba(37,99,235,.15); color:var(--primary); border-left-color:var(--primary); }
+        .nav-icon { font-size:18px; width:22px; text-align:center; }
+        .main { margin-left:220px; padding:24px; }
+
+        /* Header */
+        .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+        .top-bar h1 { font-size:22px; font-weight:700; }
+        .badge { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:600; }
+        .badge-online { background:rgba(16,185,129,.15); color:var(--success); }
+        .badge-offline { background:rgba(239,68,68,.15); color:var(--danger); }
+        .btn-logout { background:transparent; border:1px solid var(--border); color:var(--muted); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .2s; }
+        .btn-logout:hover { border-color:var(--danger); color:var(--danger); }
+
+        /* Cards */
+        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+        .stat-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
+        .stat-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+        .stat-value { font-size:32px; font-weight:700; }
+        .stat-value.green { color:var(--success); }
+        .stat-value.red { color:var(--danger); }
+        .stat-value.blue { color:var(--primary); }
+        .stat-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+
+        /* Panel */
+        .panel { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+        .panel-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
+        .panel-title { font-size:15px; font-weight:600; }
+        .panel-body { padding:20px; }
+
+        /* Table */
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th { text-align:left; padding:10px 12px; color:var(--muted); font-weight:500; border-bottom:1px solid var(--border); font-size:12px; text-transform:uppercase; }
+        td { padding:12px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
+        tr:last-child td { border-bottom:none; }
+        tr:hover td { background:rgba(255,255,255,.03); }
+        .tag { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .tag-ok { background:rgba(16,185,129,.15); color:var(--success); }
+        .tag-ko { background:rgba(239,68,68,.15); color:var(--danger); }
+        .tag-role { background:rgba(37,99,235,.15); color:var(--primary); }
+        .tag-staff { background:rgba(245,158,11,.15); color:var(--warning); }
+
+        /* Person grid */
+        .persons-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
+        .person-card { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center; position:relative; }
+        .person-avatar { width:64px; height:64px; border-radius:50%; object-fit:cover; margin:0 auto 10px; display:block; background:var(--border); }
+        .person-avatar-default { width:64px; height:64px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-size:24px; margin:0 auto 10px; }
+        .person-name { font-size:14px; font-weight:600; margin-bottom:4px; }
+        .person-date { font-size:11px; color:var(--muted); }
+        .person-actions { display:flex; gap:8px; justify-content:center; margin-top:12px; }
+        .btn-sm { padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer; border:none; transition:all .2s; }
+        .btn-danger { background:rgba(239,68,68,.2); color:var(--danger); }
+        .btn-danger:hover { background:rgba(239,68,68,.35); }
+        .btn-toggle { background:rgba(245,158,11,.2); color:var(--warning); }
+        .btn-toggle:hover { background:rgba(245,158,11,.35); }
+        .disabled-overlay { position:absolute; inset:0; border-radius:12px; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--muted); }
+
+        /* Live feed */
+        .live-event { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.05); animation:slideIn .3s ease; }
+        .live-event:last-child { border-bottom:none; }
+        @keyframes slideIn { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+        .event-icon { font-size:22px; flex-shrink:0; }
+        .event-name { font-size:14px; font-weight:500; }
+        .event-time { font-size:11px; color:var(--muted); }
+        .event-conf { font-size:11px; color:var(--muted); }
+
+        /* Status dot */
+        .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+        .dot-green { background:var(--success); box-shadow:0 0 6px var(--success); }
+        .dot-red { background:var(--danger); }
+
+        /* Filters */
+        .filters { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+        .filter-input { background:rgba(255,255,255,.06); border:1px solid var(--border); color:var(--text); padding:8px 12px; border-radius:8px; font-size:13px; outline:none; }
+        .filter-input:focus { border-color:var(--primary); }
+        .btn-primary { background:var(--primary); color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .2s; }
+        .btn-primary:hover { background:#1d4ed8; }
+        .btn-secondary { background:rgba(255,255,255,.08); color:var(--text); border:1px solid var(--border); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .2s; }
+        .btn-secondary:hover { background:rgba(255,255,255,.13); }
+
+        /* Config */
+        .config-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .config-item { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:10px; padding:16px; }
+        .config-label { font-size:12px; color:var(--muted); margin-bottom:8px; }
+        .config-value { font-size:18px; font-weight:600; }
+
+        /* Page sections */
+        .page { display:none; }
+        .page.active { display:block; }
+
+        /* Responsive */
+        @media(max-width:900px) {
+            .sidebar { width:60px; }
+            .sidebar-logo, .nav-item span { display:none; }
+            .main { margin-left:60px; }
+            .stats-grid { grid-template-columns:1fr 1fr; }
+            .config-grid { grid-template-columns:1fr; }
+        }
+        @media(max-width:600px) {
+            .stats-grid { grid-template-columns:1fr; }
+        }
+        .empty { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="sidebar-logo">
+        <h2>FaceAccess</h2>
+        <span>Restaurant</span>
+    </div>
+    <div class="nav-item active" onclick="showPage('home')">
+        <span class="nav-icon"></span><span>Accueil</span>
+    </div>
+    <div class="nav-item" onclick="showPage('persons')">
+        <span class="nav-icon"></span><span>Personnes</span>
+    </div>
+    <div class="nav-item" onclick="showPage('logs')">
+        <span class="nav-icon"></span><span>Journal</span>
+    </div>
+    <div class="nav-item" onclick="showPage('config')">
+        <span class="nav-icon"></span><span>Configuration</span>
+    </div>
+</nav>
+
+<main class="main">
+    <div class="top-bar">
+        <h1 id="pageTitle">Tableau de bord</h1>
+        <div style="display:flex;gap:12px;align-items:center">
+            <span class="badge badge-offline" id="pyStatus"><span class="dot dot-red"></span> Python hors ligne</span>
+            <span class="badge badge-offline" id="dbStatus"><span class="dot dot-red"></span> DB hors ligne</span>
+            <button class="btn-logout" onclick="logout()">Déconnexion</button>
+        </div>
+    </div>
+
+    <!-- HOME PAGE -->
+    <div class="page active" id="page-home">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Accès aujourd'hui</div>
+                <div class="stat-value blue" id="statToday">—</div>
+                <div class="stat-sub">Total du jour</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Autorisés</div>
+                <div class="stat-value green" id="statAuth">—</div>
+                <div class="stat-sub">Accès accordés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Refusés</div>
+                <div class="stat-value red" id="statDenied">—</div>
+                <div class="stat-sub">Accès refusés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Personnes enregistrées</div>
+                <div class="stat-value" id="statPersons">—</div>
+                <div class="stat-sub">Base de données</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">Accès en temps réel</span>
+                <span class="badge badge-online" id="wsStatus"><span class="dot dot-red" id="wsDot"></span> WebSocket</span>
+            </div>
+            <div class="panel-body" id="liveEvents">
+                <div class="empty">En attente d'événements...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PERSONS PAGE -->
+    <div class="page" id="page-persons">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div></div>
+            <button class="btn-primary" onclick="loadPersons()">Actualiser</button>
+        </div>
+        <div class="persons-grid" id="personsGrid">
+            <div class="empty">Chargement...</div>
+        </div>
+    </div>
+
+    <!-- LOGS PAGE -->
+    <div class="page" id="page-logs">
+        <div class="filters">
+            <select class="filter-input" id="filterAuth" onchange="loadLogs()">
+                <option value="">Tous</option>
+                <option value="true">Autorisés</option>
+                <option value="false">Refusés</option>
+            </select>
+            <input type="text" class="filter-input" id="filterName" placeholder="Nom..." oninput="loadLogs()" style="width:160px">
+            <input type="date" class="filter-input" id="filterFrom" onchange="loadLogs()">
+            <input type="date" class="filter-input" id="filterTo" onchange="loadLogs()">
+            <button class="btn-secondary" onclick="resetFilters()">Réinitialiser</button>
+            <button class="btn-danger btn-sm" style="padding:8px 16px;border-radius:8px;font-size:13px" onclick="clearLogs()">Effacer tout</button>
+        </div>
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">Journal d'accès</span>
+                <span id="logsCount" style="font-size:12px;color:var(--muted)"></span>
+            </div>
+            <div style="overflow-x:auto">
+                <table>
+                    <thead><tr>
+                        <th>Date / Heure</th>
+                        <th>Personne</th>
+                        <th>Résultat</th>
+                        <th>Confiance</th>
+                        <th>Photo</th>
+                    </tr></thead>
+                    <tbody id="logsTable"><tr><td colspan="5" class="empty">Chargement...</td></tr></tbody>
+                </table>
+            </div>
+            <div style="display:flex;justify-content:center;gap:8px;padding:16px" id="logsPagination"></div>
+        </div>
+    </div>
+
+    <!-- CONFIG PAGE -->
+    <div class="page" id="page-config">
+        <div class="config-grid">
+            <div class="config-item">
+                <div class="config-label">Seuil de confiance</div>
+                <div class="config-value" id="confThreshold">0.55</div>
+                <input type="range" min="0.3" max="0.9" step="0.05" value="0.55" id="thresholdSlider"
+                    oninput="document.getElementById('confThreshold').textContent=this.value"
+                    style="width:100%;margin-top:10px;accent-color:var(--primary)">
+                <div style="font-size:11px;color:var(--muted);margin-top:4px">Valeur recommandée : 0.55</div>
+            </div>
+            <div class="config-item">
+                <div class="config-label">URL Serveur</div>
+                <div class="config-value" style="font-size:14px" id="serverUrl">—</div>
+            </div>
+            <div class="config-item">
+                <div class="config-label">Moteur Python</div>
+                <div class="config-value" id="cfgPython">—</div>
+            </div>
+            <div class="config-item">
+                <div class="config-label">Base de données</div>
+                <div class="config-value" id="cfgDb">—</div>
+            </div>
+            <div class="config-item">
+                <div class="config-label">Uptime serveur</div>
+                <div class="config-value" id="cfgUptime">—</div>
+            </div>
+            <div class="config-item">
+                <div class="config-label">Heure serveur</div>
+                <div class="config-value" style="font-size:14px" id="cfgTime">—</div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+const API = '';
+let token = localStorage.getItem('token');
+let ws = null;
+let currentLogsPage = 1;
+const MAX_LIVE = 20;
+
+if (!token) { window.location.href = '/login.html'; }
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const pageTitles = { home: 'Tableau de bord', persons: 'Personnes enregistrées', logs: 'Journal d\'accès', config: 'Configuration' };
+function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    document.querySelectorAll('.nav-item')[['home','persons','logs','config'].indexOf(id)].classList.add('active');
+    document.getElementById('pageTitle').textContent = pageTitles[id];
+    if (id === 'home') loadStats();
+    if (id === 'persons') loadPersons();
+    if (id === 'logs') loadLogs();
+    if (id === 'config') loadConfig();
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function headers() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }; }
+function logout() { localStorage.removeItem('token'); window.location.href = '/login.html'; }
+
+async function apiFetch(url, opts = {}) {
+    opts.headers = { ...headers(), ...(opts.headers || {}) };
+    const r = await fetch(API + url, opts);
+    if (r.status === 401 || r.status === 403) { logout(); return null; }
+    return r.json();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+    const data = await apiFetch('/api/stats');
+    if (!data) return;
+    document.getElementById('statToday').textContent = data.todayTotal ?? '—';
+    document.getElementById('statAuth').textContent = data.authorized ?? '—';
+    document.getElementById('statDenied').textContent = data.denied ?? '—';
+    document.getElementById('statPersons').textContent = data.personsCount ?? '—';
+    updatePyStatus(data.pythonOnline);
+}
+
+function updatePyStatus(online) {
+    const el = document.getElementById('pyStatus');
+    el.className = 'badge ' + (online ? 'badge-online' : 'badge-offline');
+    el.innerHTML = `<span class="dot ${online ? 'dot-green' : 'dot-red'}"></span> Python ${online ? 'en ligne' : 'hors ligne'}`;
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}?token=${token}`);
+    ws.onopen = () => {
+        document.getElementById('wsStatus').className = 'badge badge-online';
+        document.getElementById('wsStatus').innerHTML = '<span class="dot dot-green"></span> WebSocket';
+    };
+    ws.onclose = () => {
+        document.getElementById('wsStatus').className = 'badge badge-offline';
+        setTimeout(connectWS, 3000);
+    };
+    ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'access_event') addLiveEvent(msg.data);
+        if (msg.type === 'server_status') {
+            updatePyStatus(msg.status.pythonOnline);
+            const dbEl = document.getElementById('dbStatus');
+            dbEl.className = 'badge ' + (msg.status.dbConnected ? 'badge-online' : 'badge-offline');
+            dbEl.innerHTML = `<span class="dot ${msg.status.dbConnected ? 'dot-green' : 'dot-red'}"></span> DB ${msg.status.dbConnected ? 'connectée' : 'hors ligne'}`;
+        }
+    };
+}
+
+function addLiveEvent(ev) {
+    const container = document.getElementById('liveEvents');
+    const empty = container.querySelector('.empty');
+    if (empty) empty.remove();
+
+    const el = document.createElement('div');
+    el.className = 'live-event';
+    const t = new Date(ev.timestamp).toLocaleTimeString('fr-FR');
+    el.innerHTML = `
+        <span class="event-icon">${ev.authorized ? '✅' : '❌'}</span>
+        <div style="flex:1">
+            <div class="event-name">${ev.personName}</div>
+            <div class="event-time">${t}</div>
+        </div>
+        <div class="event-conf">${ev.confidence ? (ev.confidence*100).toFixed(0)+'%' : ''}</div>
+    `;
+    container.prepend(el);
+    while (container.children.length > MAX_LIVE) container.lastChild.remove();
+    loadStats();
+}
+
+// ── Persons ───────────────────────────────────────────────────────────────────
+async function loadPersons() {
+    const grid = document.getElementById('personsGrid');
+    grid.innerHTML = '<div class="empty">Chargement...</div>';
+    const persons = await apiFetch('/api/persons');
+    if (!persons || !persons.length) { grid.innerHTML = '<div class="empty">Aucune personne enregistrée.</div>'; return; }
+    grid.innerHTML = '';
+    persons.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'person-card';
+        if (!p.active) card.innerHTML += '<div class="disabled-overlay">Désactivé</div>';
+        const roleClass = ['staff','admin'].includes(p.role) ? 'tag-staff' : 'tag-role';
+        const date = new Date(p.enrolledAt).toLocaleDateString('fr-FR');
+        card.innerHTML = `
+            ${p.photoUrl ? `<img class="person-avatar" src="${p.photoUrl}" onerror="this.style.display='none'">` : `<div class="person-avatar-default">👤</div>`}
+            <div class="person-name">${p.name}</div>
+            <div style="margin-bottom:4px"><span class="tag ${roleClass}">${p.role}</span></div>
+            <div class="person-date">Enregistré le ${date}</div>
+            <div class="person-actions">
+                <button class="btn-sm btn-toggle" onclick="togglePerson('${p.personId}', ${p.active})">${p.active ? 'Désactiver' : 'Activer'}</button>
+                <button class="btn-sm btn-danger" onclick="deletePerson('${p.personId}', '${p.name}')">Supprimer</button>
+            </div>
+            ${!p.active ? '<div class="disabled-overlay">Désactivé</div>' : ''}
+        `;
+        grid.appendChild(card);
+    });
+}
+
+async function togglePerson(id, current) {
+    await apiFetch(`/api/persons/${id}`, { method: 'PATCH', body: JSON.stringify({ active: !current }) });
+    loadPersons();
+}
+
+async function deletePerson(id, name) {
+    if (!confirm(`Supprimer ${name} ? Cette action est irréversible.`)) return;
+    await apiFetch(`/api/persons/${id}`, { method: 'DELETE' });
+    loadPersons();
+    loadStats();
+}
+
+// ── Logs ──────────────────────────────────────────────────────────────────────
+async function loadLogs(page = 1) {
+    currentLogsPage = page;
+    const auth = document.getElementById('filterAuth').value;
+    const name = document.getElementById('filterName').value;
+    const from = document.getElementById('filterFrom').value;
+    const to   = document.getElementById('filterTo').value;
+
+    const params = new URLSearchParams({ limit: 50, page });
+    if (auth) params.set('authorized', auth);
+    if (name) params.set('personName', name);
+    if (from) params.set('from', from);
+    if (to)   params.set('to', to + 'T23:59:59');
+
+    const data = await apiFetch(`/api/logs?${params}`);
+    if (!data) return;
+
+    document.getElementById('logsCount').textContent = `${data.total} entrées`;
+    const tbody = document.getElementById('logsTable');
+
+    if (!data.logs.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Aucun enregistrement.</td></tr>'; return; }
+
+    tbody.innerHTML = data.logs.map(l => {
+        const dt = new Date(l.timestamp).toLocaleString('fr-FR');
+        const pct = l.confidence ? (l.confidence * 100).toFixed(0) + '%' : '—';
+        const photo = l.capturedImagePath ? `<a href="${l.capturedImagePath}" target="_blank"><img src="${l.capturedImagePath}" style="width:36px;height:36px;border-radius:6px;object-fit:cover"></a>` : '—';
+        return `<tr>
+            <td>${dt}</td>
+            <td>${l.personName}</td>
+            <td><span class="tag ${l.authorized ? 'tag-ok' : 'tag-ko'}">${l.authorized ? '✅ Autorisé' : '❌ Refusé'}</span></td>
+            <td>${pct}</td>
+            <td>${photo}</td>
+        </tr>`;
+    }).join('');
+
+    // Pagination
+    const pag = document.getElementById('logsPagination');
+    if (data.pages <= 1) { pag.innerHTML = ''; return; }
+    let html = '';
+    for (let i = 1; i <= data.pages; i++) {
+        html += `<button class="btn-sm ${i === page ? 'btn-primary' : 'btn-secondary'}" onclick="loadLogs(${i})">${i}</button>`;
+    }
+    pag.innerHTML = html;
+}
+
+function resetFilters() {
+    document.getElementById('filterAuth').value = '';
+    document.getElementById('filterName').value = '';
+    document.getElementById('filterFrom').value = '';
+    document.getElementById('filterTo').value = '';
+    loadLogs();
+}
+
+async function clearLogs() {
+    if (!confirm('Effacer tout le journal ? Cette action est irréversible.')) return;
+    await apiFetch('/api/logs', { method: 'DELETE' });
+    loadLogs();
+    loadStats();
+}
+
+// ── Config ────────────────────────────────────────────────────────────────────
+async function loadConfig() {
+    document.getElementById('serverUrl').textContent = location.origin;
+    try {
+        const h = await fetch('/health').then(r => r.json());
+        document.getElementById('cfgPython').textContent = h.pythonOnline ? 'En ligne' : 'Hors ligne';
+        document.getElementById('cfgPython').style.color = h.pythonOnline ? 'var(--success)' : 'var(--danger)';
+        document.getElementById('cfgDb').textContent = h.dbConnected ? 'Connectée' : 'Hors ligne';
+        document.getElementById('cfgDb').style.color = h.dbConnected ? 'var(--success)' : 'var(--danger)';
+        document.getElementById('cfgUptime').textContent = formatUptime(h.uptime);
+        document.getElementById('cfgTime').textContent = new Date(h.serverTime).toLocaleString('fr-FR');
+    } catch {}
+}
+
+function formatUptime(s) {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return `${h}h ${m}m`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadStats();
+connectWS();
+setInterval(loadStats, 30000);
+</script>
+</body>
+</html>
